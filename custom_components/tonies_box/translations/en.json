@@ -1,0 +1,110 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Toniebox",
+        "description": "Enter your Toniebox cloud credentials",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Toniebox cloud",
+      "invalid_auth": "Invalid authentication credentials",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This account is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "chapters_present": {
+        "name": "Chapters"
+      },
+      "seconds_present": {
+        "name": "Duration"
+      },
+      "chapters_remaining": {
+        "name": "Remaining chapters"
+      },
+      "seconds_remaining": {
+        "name": "Remaining duration"
+      },
+      "transcoding": {
+        "name": "Transcoding status",
+        "state": {
+          "ready": "Ready",
+          "transcoding": "Transcoding"
+        }
+      },
+      "last_update": {
+        "name": "Last update"
+      }
+    }
+  },
+  "services": {
+    "upload_file": {
+      "name": "Upload file to Tonie",
+      "description": "Upload an audio file to a Creative Tonie and add it as a new chapter",
+      "fields": {
+        "tonie_id": {
+          "name": "Tonie ID",
+          "description": "The ID of the Creative Tonie to upload to"
+        },
+        "file_path": {
+          "name": "File path",
+          "description": "Path to the audio file to upload (must be accessible by Home Assistant)"
+        },
+        "title": {
+          "name": "Chapter title",
+          "description": "Title for the new chapter"
+        }
+      }
+    },
+    "add_chapter": {
+      "name": "Add chapter to Tonie",
+      "description": "Add a previously uploaded file as a chapter to a Creative Tonie",
+      "fields": {
+        "tonie_id": {
+          "name": "Tonie ID",
+          "description": "The ID of the Creative Tonie"
+        },
+        "file_id": {
+          "name": "File ID",
+          "description": "The ID of the file (obtained from upload_file service)"
+        },
+        "title": {
+          "name": "Chapter title",
+          "description": "Title for the chapter"
+        }
+      }
+    },
+    "clear_chapters": {
+      "name": "Clear all chapters",
+      "description": "Remove all chapters from a Creative Tonie",
+      "fields": {
+        "tonie_id": {
+          "name": "Tonie ID",
+          "description": "The ID of the Creative Tonie to clear"
+        }
+      }
+    },
+    "sort_chapters": {
+      "name": "Sort chapters",
+      "description": "Reorder chapters on a Creative Tonie",
+      "fields": {
+        "tonie_id": {
+          "name": "Tonie ID",
+          "description": "The ID of the Creative Tonie"
+        },
+        "chapters": {
+          "name": "Chapters",
+          "description": "List of chapter objects in the desired order (with id, title, file fields)"
+        }
+      }
+    }
+  }
+}

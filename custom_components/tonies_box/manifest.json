@@ -1,0 +1,13 @@
+{
+  "domain": "tonies_box",
+  "name": "Toniebox",
+  "codeowners": ["@your-github-username"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/your-username/tonies_hass",
+  "integration_type": "device",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/your-username/tonies_hass/issues",
+  "requirements": ["tonie-api==0.1.2"],
+  "version": "0.1.0"
+}

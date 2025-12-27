@@ -1,0 +1,110 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connexion à Toniebox",
+        "description": "Entrez vos identifiants Toniebox cloud",
+        "data": {
+          "username": "Email",
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de la connexion au cloud Toniebox",
+      "invalid_auth": "Identifiants d'authentification invalides",
+      "unknown": "Erreur inattendue"
+    },
+    "abort": {
+      "already_configured": "Ce compte est déjà configuré"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "chapters_present": {
+        "name": "Chapitres"
+      },
+      "seconds_present": {
+        "name": "Durée"
+      },
+      "chapters_remaining": {
+        "name": "Chapitres restants"
+      },
+      "seconds_remaining": {
+        "name": "Durée restante"
+      },
+      "transcoding": {
+        "name": "État du transcodage",
+        "state": {
+          "ready": "Prêt",
+          "transcoding": "Transcodage en cours"
+        }
+      },
+      "last_update": {
+        "name": "Dernière mise à jour"
+      }
+    }
+  },
+  "services": {
+    "upload_file": {
+      "name": "Téléverser un fichier vers le Tonie",
+      "description": "Téléverser un fichier audio vers un Creative Tonie et l'ajouter comme nouveau chapitre",
+      "fields": {
+        "tonie_id": {
+          "name": "ID du Tonie",
+          "description": "L'ID du Creative Tonie vers lequel téléverser"
+        },
+        "file_path": {
+          "name": "Chemin du fichier",
+          "description": "Chemin vers le fichier audio à téléverser (doit être accessible par Home Assistant)"
+        },
+        "title": {
+          "name": "Titre du chapitre",
+          "description": "Titre du nouveau chapitre"
+        }
+      }
+    },
+    "add_chapter": {
+      "name": "Ajouter un chapitre au Tonie",
+      "description": "Ajouter un fichier précédemment téléversé comme chapitre à un Creative Tonie",
+      "fields": {
+        "tonie_id": {
+          "name": "ID du Tonie",
+          "description": "L'ID du Creative Tonie"
+        },
+        "file_id": {
+          "name": "ID du fichier",
+          "description": "L'ID du fichier (obtenu depuis le service upload_file)"
+        },
+        "title": {
+          "name": "Titre du chapitre",
+          "description": "Titre du chapitre"
+        }
+      }
+    },
+    "clear_chapters": {
+      "name": "Effacer tous les chapitres",
+      "description": "Supprimer tous les chapitres d'un Creative Tonie",
+      "fields": {
+        "tonie_id": {
+          "name": "ID du Tonie",
+          "description": "L'ID du Creative Tonie à effacer"
+        }
+      }
+    },
+    "sort_chapters": {
+      "name": "Trier les chapitres",
+      "description": "Réorganiser les chapitres sur un Creative Tonie",
+      "fields": {
+        "tonie_id": {
+          "name": "ID du Tonie",
+          "description": "L'ID du Creative Tonie"
+        },
+        "chapters": {
+          "name": "Chapitres",
+          "description": "Liste des objets chapitre dans l'ordre souhaité (avec les champs id, title, file)"
+        }
+      }
+    }
+  }
+}
