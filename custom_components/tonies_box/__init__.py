@@ -201,6 +201,7 @@ class TonieboxDataUpdateCoordinator(DataUpdateCoordinator):
         self.username = username
         self.password = password
         self.api = None
+        self.api2 = None
         self._households = []
 
     async def _async_update_data(self):
@@ -213,10 +214,18 @@ class TonieboxDataUpdateCoordinator(DataUpdateCoordinator):
                 self.api = await self.hass.async_add_executor_job(
                     TonieAPI, self.username, self.password
                 )
+            if self.api2 is None:
+                # Import here to avoid blocking the event loop during startup
+                from .api import ToniesClient
+
+                self.api2 = await self.hass.async_add_executor_job(
+                    ToniesClient, self.username, self.password
+                )
+
 
             # Fetch all households
             households = await self.hass.async_add_executor_job(
-                self.api.get_households
+                self.api2.get_households
             )
             self._households = households
 
@@ -224,12 +233,12 @@ class TonieboxDataUpdateCoordinator(DataUpdateCoordinator):
             creative_tonies = []
             for household in households:
                 tonies = await self.hass.async_add_executor_job(
-                    self.api.get_all_creative_tonies_by_household, household
+                    self.api2.get_all_creative_tonies_by_household, household
                 )
                 creative_tonies.extend(tonies)
 
             # Get user info
-            user = await self.hass.async_add_executor_job(self.api.get_me)
+            user = await self.hass.async_add_executor_job(self.api2.get_me)
 
             return {
                 "households": households,
