@@ -105,6 +105,20 @@
           "description": "List of chapter objects in the desired order (with id, title, file fields)"
         }
       }
+    },
+    "set_volume": {
+      "name": "Set maximum volume",
+      "description": "Set the maximum volume limit of the Toniebox",
+      "fields": {
+        "box_id": {
+          "name": "Toniebox ID",
+          "description": "The ID of the Toniebox"
+        },
+        "volume": {
+          "name": "Volume Level",
+          "description": "Volume limit level (0=100%, 1=75%, 2=50%, 3=25%)"
+        }
+      }
     }
   }
 }

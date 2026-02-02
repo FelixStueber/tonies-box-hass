@@ -1,219 +1,307 @@
-import requests
-from typing import Optional, Any
-from .session import TonieCloudSession
+import asyncio
+import logging
+import os
+import socket
+import aiohttp
+import async_timeout
 
+_LOGGER = logging.getLogger(__name__)
 
-class ToniesAPIError(Exception):
-    """Raised when the Tonies API returns an error."""
-    pass
+API_BASE_URL = "https://api.tonie.cloud/v2"
+GRAPHQL_URL = "https://api.prod.tcs.toys/v2/graphql"
 
+class TonieboxApiClientError(Exception):
+    """Exception to indicate a general API error."""
 
-class ToniesClient:
-    BASE_URL = "https://api.tonie.cloud/v2/graphql"
+class TonieboxApiClientCommunicationError(TonieboxApiClientError):
+    """Exception to indicate a communication error."""
 
-    def __init__(self,  username: str, password: str, timeout: int = 30):
-        """Initializes the API and creates a session token for tonie cloud session."""
-        self.session = TonieCloudSession()
-        self.session.acquire_token(username=username, password=password, timeout=timeout)
-        self.timeout = timeout
+class TonieboxApiClientAuthenticationError(TonieboxApiClientError):
+    """Exception to indicate an authentication error."""
 
-    def _headers(self) -> dict[str, str]:
-        return {
-            "Authorization": f"Bearer {self.session.token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
+class TonieboxApiClient:
+    def __init__(self, username, password, session: aiohttp.ClientSession) -> None:
+        self._username = username
+        self._password = password
+        self._session = session
+        self._token = None
+
+    async def async_get_access_token(self) -> str:
+        if self._token:
+            return self._token
+
+        payload = {
+            "grant_type": "password",
+            "client_id": "my-tonies",
+            "scope": "openid",
+            "username": self._username,
+            "password": self._password,
         }
 
-    def execute(
-        self,
-        query: str,
-        variables: Optional[dict[str, Any]] = None,
-        operation_name: Optional[str] = None,
-    ) -> dict[str, Any]:
-        """
-        Execute a GraphQL query or mutation.
-        """
-        payload: dict[str, Any] = {"query": query}
+        try:
+            async with async_timeout.timeout(10):
+                response = await self._session.post(
+                    "https://login.tonies.com/auth/realms/tonies/protocol/openid-connect/token",
+                    data=payload,
+                )
+                response.raise_for_status()
+                data = await response.json()
+                self._token = data.get("access_token")
+                return self._token
+        except (asyncio.TimeoutError, aiohttp.ClientError) as exception:
+            raise TonieboxApiClientAuthenticationError(
+                "Error fetching token"
+            ) from exception
 
-        if variables is not None:
-            payload["variables"] = variables
+    async def async_get_data(self):
+        """Get all data from the API."""
+        try:
+            token = await self.async_get_access_token()
+        except TonieboxApiClientAuthenticationError:
+            # Token might be expired or invalid, try once more if we had a token
+            if self._token:
+                self._token = None
+                token = await self.async_get_access_token()
+            else:
+                raise
 
-        if operation_name:
-            payload["operationName"] = operation_name
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        try:
+            async with async_timeout.timeout(20):
+                # Get Households
+                async with self._session.get(f"{API_BASE_URL}/households", headers=headers) as resp:
+                    if resp.status == 401:
+                        self._token = None
+                        raise TonieboxApiClientAuthenticationError("Token expired")
+                    resp.raise_for_status()
+                    households = await resp.json()
 
-        response = requests.post(
-            self.BASE_URL,
-            json=payload,
-            headers=self._headers(),
-            timeout=self.timeout,
-        )
+                data = {"households": [], "boxes": {}, "creative_tonies": {}, "tonies": {}}
 
-        if not response.ok:
-            raise ToniesAPIError(
-                f"HTTP {response.status_code}: {response.text}"
-            )
+                for household in households:
+                    h_id = household["id"]
+                    data["households"].append(household)
+                    
+                    # Get Boxes
+                    async with self._session.get(f"{API_BASE_URL}/households/{h_id}/tonieboxes", headers=headers) as resp_boxes:
+                        if resp_boxes.status == 200:
+                            boxes = await resp_boxes.json()
+                            for box in boxes:
+                                box["household_id"] = h_id
+                                data["boxes"][box["id"]] = box
 
-        data = response.json()
-
-        if "errors" in data:
-            raise ToniesAPIError(data["errors"])
-
-        return data.get("data", {})
-
-    # =========================
-    # High-level API methods
-    # =========================
-
-    def get_me(self) -> dict[str, Any]:
-        """
-        Returns the currently authenticated user.
-        """
-        query = """
-        query Me {
-          me {
-            id
-            email
-            firstName
-            lastName
-          }
-        }
-        """
-        return self.execute(query)["me"]
-
-    def get_households(self) -> list[dict[str, Any]]:
-        """
-        Returns all households for the current account.
-        """
-        query = """
-        query Households {
-          households {
-            id
-            name
-          }
-        }
-        """
-        return self.execute(query)["households"]
-
-    def list_tonieboxes(self) -> list[dict[str, Any]]:
-        """
-        Returns all Toniebox devices linked to the account.
-        """
-        query = """
-        query Devices {
-          devices {
-            id
-            name
-            serialNumber
-            online
-          }
-        }
-        """
-        return self.execute(query)["devices"]
-
-    def list_creative_tonies(self) -> list[dict[str, Any]]:
-        """
-        Returns all Creative Tonies in the library.
-        """
-        query = """
-        query CreativeTonies {
-          creativeTonies {
-            id
-            title
-            description
-            duration
-          }
-        }
-        """
-        return self.execute(query)["creativeTonies"]
-
-    def get_all_creative_tonies_by_household(
-        self, household_id: str
-    ) -> list[dict]:
-        """
-        Returns all Creative Tonies for a given household.
-        """
-        query = """
-        {
-          households {
-            access
-            canLeave
-            foreignCreativeTonieContent
-            id
-            image
-            name
-            ownerName
-            creativeTonies {
-              id
-              name
-              live
-              private
-              imageUrl
-              secondsRemaining
-              secondsPresent
-              tune {
-                item {
-                  title
-                  languageUnicode
-                  __typename
+                # Get All Tonies via GraphQL
+                gql_query = {
+                    "query": "query ContentTonies { households { id contentTonies { id title series { name } imageUrl } } }",
+                    "operationName": "ContentTonies",
+                    "variables": {}
                 }
-                __typename
-              }
-              _typename
-            }
-            __typename
-          }
-          contentTokens(first: 12, selection: "public", region: "geoip") {
-            edges {
-              node {
-                token
-                title
-                subtitle
-                thumbnail
-                __typename
-              }
-              __typename
-            }
-            __typename
-          }
-        }
-        """
+                async with self._session.post(GRAPHQL_URL, json=gql_query, headers=headers) as resp_gql:
+                    if resp_gql.status == 200:
+                        gql_data = await resp_gql.json()
+                        if "data" in gql_data and "households" in gql_data["data"]:
+                            for hh in gql_data["data"]["households"]:
+                                h_id = hh["id"]
+                                for tonie in hh.get("contentTonies", []):
+                                    data["tonies"][tonie["id"]] = {
+                                        "id": tonie["id"],
+                                        "name": tonie["title"],
+                                        "series": tonie.get("series", {}).get("name", "Unknown"),
+                                        "imageUrl": tonie["imageUrl"],
+                                        "household_id": h_id,
+                                        "model": tonie.get("series", {}).get("name", "Tonie Figurine")
+                                    }
+                            _LOGGER.debug("Fetched %s tonies via GraphQL", len(data["tonies"]))
+                    else:
+                        _LOGGER.error("Failed to fetch tonies via GraphQL: %s", resp_gql.status)
+                
+                # Get Creative Tonies via GraphQL
+                gql_query_creative = {
+                    "query": "query CreativeTonies { households { id creativeTonies { id name live private imageUrl secondsRemaining secondsPresent transcoding chapters { id title file seconds } } } }",
+                    "variables": {}
+                }
+                async with self._session.post(GRAPHQL_URL, json=gql_query_creative, headers=headers) as resp_gql_creative:
+                    if resp_gql_creative.status == 200:
+                        gql_data = await resp_gql_creative.json()
+                        if "data" in gql_data and "households" in gql_data["data"]:
+                            for hh in gql_data["data"]["households"]:
+                                h_id = hh["id"]
+                                for tonie in hh.get("creativeTonies", []):
+                                    tonie["household_id"] = h_id
+                                    data["creative_tonies"][tonie["id"]] = tonie
+                            _LOGGER.debug("Fetched creative tonies via GraphQL")
+                    else:
+                        _LOGGER.error("Failed to fetch creative tonies via GraphQL: %s", resp_gql_creative.status)
 
-        variables = {"householdId": household_id}
+                return data
+        except (asyncio.TimeoutError, aiohttp.ClientError, socket.gaierror) as exception:
+            raise TonieboxApiClientCommunicationError(
+                "Error fetching data"
+            ) from exception
 
-        result = self.execute(query, variables)
+    async def async_upload_file(self, tonie_id: str, file_path: str, title: str):
+        """Upload a file to a Creative Tonie."""
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
 
-        household = result.get("household")
-        if not household:
-            return []
+        data = await self.async_get_data()
+        if tonie_id not in data["creative_tonies"]:
+            raise TonieboxApiClientError(f"Creative Tonie {tonie_id} not found")
+        
+        tonie_data = data["creative_tonies"][tonie_id]
+        household_id = tonie_data["household_id"]
+        current_chapters = tonie_data.get("chapters", [])
 
-        return household.get("creativeTonies", [])
-    
-    def get_tonieboxes(self) -> list[dict]:
-        """
-        Returns all Tonieboxes across all households.
-        """
-        query = """
-        query {
-          households {
-            id
-            name
-            tonieboxes {
-              id
-              name
-              imageUrl
-              householdId
-            }
-          }
-        }
-        """
+        filename = os.path.basename(file_path)
+        async with self._session.post(
+            f"{API_BASE_URL}/file", 
+            headers=headers, 
+            json={"filename": filename}
+        ) as resp:
+            resp.raise_for_status()
+            upload_info = await resp.json()
+            request_uuid = upload_info["requestUuid"]
+            file_id = upload_info["fileId"]
 
-        result = self.execute(query)
+        def read_file():
+            with open(file_path, "rb") as f:
+                return f.read()
+        
+        loop = asyncio.get_running_loop()
+        file_content = await loop.run_in_executor(None, read_file)
 
-        tonieboxes: list[dict] = []
+        async with self._session.put(
+            f"{API_BASE_URL}/file/{request_uuid}",
+            headers=headers,
+            data=file_content
+        ) as resp:
+            resp.raise_for_status()
 
-        for household in result.get("households", []):
-            for box in household.get("tonieboxes", []):
-                box["householdName"] = household.get("name")
-                tonieboxes.append(box)
+        new_chapter = {"id": file_id, "file": file_id, "title": title, "seconds": 0}
+        new_chapters = current_chapters + [new_chapter]
 
-        return tonieboxes
+        async with self._session.patch(
+            f"{API_BASE_URL}/households/{household_id}/creative_tonies/{tonie_id}",
+            headers=headers,
+            json={"chapters": new_chapters}
+        ) as resp:
+            resp.raise_for_status()
+
+    async def async_add_chapter(self, tonie_id: str, file_id: str, title: str):
+        """Add a chapter to a Creative Tonie using an existing file."""
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        data = await self.async_get_data()
+        if tonie_id not in data["creative_tonies"]:
+            raise TonieboxApiClientError(f"Creative Tonie {tonie_id} not found")
+        
+        tonie_data = data["creative_tonies"][tonie_id]
+        household_id = tonie_data["household_id"]
+        current_chapters = tonie_data.get("chapters", [])
+
+        new_chapter = {"id": file_id, "file": file_id, "title": title, "seconds": 0}
+        new_chapters = current_chapters + [new_chapter]
+
+        async with self._session.patch(
+            f"{API_BASE_URL}/households/{household_id}/creative_tonies/{tonie_id}",
+            headers=headers,
+            json={"chapters": new_chapters}
+        ) as resp:
+            resp.raise_for_status()
+
+    async def async_sort_chapters(self, tonie_id: str, chapters: list):
+        """Sort chapters on a Creative Tonie."""
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        data = await self.async_get_data()
+        if tonie_id not in data["creative_tonies"]:
+            raise TonieboxApiClientError(f"Creative Tonie {tonie_id} not found")
+        
+        tonie_data = data["creative_tonies"][tonie_id]
+        household_id = tonie_data["household_id"]
+
+        async with self._session.patch(
+            f"{API_BASE_URL}/households/{household_id}/creative_tonies/{tonie_id}",
+            headers=headers,
+            json={"chapters": chapters}
+        ) as resp:
+            resp.raise_for_status()
+
+    async def async_clear_chapters(self, tonie_id: str):
+        """Clear all chapters from a Creative Tonie."""
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        data = await self.async_get_data()
+        if tonie_id not in data["creative_tonies"]:
+            raise TonieboxApiClientError(f"Creative Tonie {tonie_id} not found")
+        
+        tonie_data = data["creative_tonies"][tonie_id]
+        household_id = tonie_data["household_id"]
+
+        async with self._session.patch(
+            f"{API_BASE_URL}/households/{household_id}/creative_tonies/{tonie_id}",
+            headers=headers,
+            json={"chapters": []}
+        ) as resp:
+            resp.raise_for_status()
+
+    async def async_set_volume(self, box_id: str, volume: int):
+        """Set the maximum volume of a Toniebox."""
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        data = await self.async_get_data()
+        if box_id not in data["boxes"]:
+            raise TonieboxApiClientError(f"Toniebox {box_id} not found")
+        
+        box_data = data["boxes"][box_id]
+        household_id = box_data["household_id"]
+
+        async with self._session.post(
+            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}/config",
+            headers=headers,
+            json={"maxVolume": volume}
+        ) as resp:
+            resp.raise_for_status()
+
+    async def async_set_led(self, box_id: str, led_level: str):
+        """Set the LED status of a Toniebox."""
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        data = await self.async_get_data()
+        if box_id not in data["boxes"]:
+            raise TonieboxApiClientError(f"Toniebox {box_id} not found")
+        
+        box_data = data["boxes"][box_id]
+        household_id = box_data["household_id"]
+
+        async with self._session.post(
+            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}/config",
+            headers=headers,
+            json={"ledLevel": led_level}
+        ) as resp:
+            resp.raise_for_status()
+
+    async def async_set_ear_slap(self, box_id: str, enabled: bool):
+        """Set the ear slap status of a Toniebox."""
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        data = await self.async_get_data()
+        if box_id not in data["boxes"]:
+            raise TonieboxApiClientError(f"Toniebox {box_id} not found")
+        
+        box_data = data["boxes"][box_id]
+        household_id = box_data["household_id"]
+
+        async with self._session.post(
+            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}/config",
+            headers=headers,
+            json={"slapEnabled": enabled}
+        ) as resp:
+            resp.raise_for_status()
