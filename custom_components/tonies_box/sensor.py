@@ -10,6 +10,7 @@ from .const import DOMAIN
 from .coordinator import TonieboxDataUpdateCoordinator
 from .entity import CreativeTonieEntity, TonieboxEntity
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -18,8 +19,8 @@ async def async_setup_entry(
     """Set up Toniebox sensors."""
     coordinator: TonieboxDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    entities = []
-    
+    entities: list[SensorEntity] = []
+
     # Create raw data sensor
     entities.append(TonieboxRawDataSensor(coordinator, entry.entry_id))
 
@@ -44,6 +45,7 @@ async def async_setup_entry(
 
     async_add_entities(entities)
 
+
 class CreativeTonieBaseSensor(CreativeTonieEntity):
     """Base class for Creative Tonie sensors."""
 
@@ -51,6 +53,7 @@ class CreativeTonieBaseSensor(CreativeTonieEntity):
     def entity_picture(self):
         """Return the image URL of the Tonie."""
         return self.tonie_data.get("imageUrl")
+
 
 class TonieboxRawDataSensor(CoordinatorEntity, SensorEntity):
     """Sensor to expose raw API data."""
@@ -81,20 +84,23 @@ class TonieboxRawDataSensor(CoordinatorEntity, SensorEntity):
         return self.coordinator.data
 
     @property
-    def device_info(self) -> DeviceInfo:
+    def device_info(self) -> DeviceInfo | None:
         """Return device information."""
         if "boxes" in self.coordinator.data and self.coordinator.data["boxes"]:
             box_id = next(iter(self.coordinator.data["boxes"]))
             box_data = self.coordinator.data["boxes"][box_id]
             return DeviceInfo(
                 identifiers={(DOMAIN, box_id)},
-                connections={(CONNECTION_NETWORK_MAC, box_data.get("macAddress"))} if box_data.get("macAddress") else set(),
+                connections={(CONNECTION_NETWORK_MAC, box_data.get("macAddress"))}
+                if box_data.get("macAddress")
+                else set(),
                 name=box_data.get("name", "Toniebox"),
                 manufacturer="Tonies",
                 model="Toniebox",
                 sw_version=box_data.get("firmwareVersion"),
             )
         return None
+
 
 class TonieboxBaseSensor(TonieboxEntity):
     """Base class for Toniebox sensors."""
@@ -103,6 +109,7 @@ class TonieboxBaseSensor(TonieboxEntity):
     def entity_picture(self):
         """Return the image URL of the Toniebox."""
         return self.box_data.get("imageUrl")
+
 
 class CreativeTonieChaptersSensor(CreativeTonieBaseSensor, SensorEntity):
     """Sensor for number of chapters."""
@@ -118,6 +125,7 @@ class CreativeTonieChaptersSensor(CreativeTonieBaseSensor, SensorEntity):
     @property
     def native_value(self):
         return len(self.tonie_data.get("chapters", []))
+
 
 class CreativeTonieDurationSensor(CreativeTonieBaseSensor, SensorEntity):
     """Sensor for duration."""
@@ -138,6 +146,7 @@ class CreativeTonieDurationSensor(CreativeTonieBaseSensor, SensorEntity):
     def native_value(self):
         return self.tonie_data.get("secondsPresent", 0)
 
+
 class CreativeTonieRemainingSensor(CreativeTonieBaseSensor, SensorEntity):
     """Sensor for remaining duration."""
 
@@ -156,6 +165,7 @@ class CreativeTonieRemainingSensor(CreativeTonieBaseSensor, SensorEntity):
     @property
     def native_value(self):
         return self.tonie_data.get("secondsRemaining", 0)
+
 
 class CreativeTonieTranscodingSensor(CreativeTonieBaseSensor, SensorEntity):
     """Sensor for transcoding status."""
@@ -178,6 +188,7 @@ class CreativeTonieTranscodingSensor(CreativeTonieBaseSensor, SensorEntity):
             return "transcoding"
         return "ready"
 
+
 class TonieboxVolumeSensor(TonieboxBaseSensor, SensorEntity):
     """Sensor for Toniebox maximum volume."""
 
@@ -195,6 +206,7 @@ class TonieboxVolumeSensor(TonieboxBaseSensor, SensorEntity):
     @property
     def native_value(self):
         return self.box_data.get("maxVolume")
+
 
 class TonieboxHeadphoneVolumeSensor(TonieboxBaseSensor, SensorEntity):
     """Sensor for Toniebox maximum headphone volume."""
@@ -214,6 +226,7 @@ class TonieboxHeadphoneVolumeSensor(TonieboxBaseSensor, SensorEntity):
     def native_value(self):
         return self.box_data.get("maxHeadphoneVolume")
 
+
 class TonieboxSSIDSensor(TonieboxBaseSensor, SensorEntity):
     """Sensor for Toniebox SSID."""
 
@@ -230,6 +243,7 @@ class TonieboxSSIDSensor(TonieboxBaseSensor, SensorEntity):
     @property
     def native_value(self):
         return self.box_data.get("ssid")
+
 
 class TonieSensor(CoordinatorEntity, SensorEntity):
     """Representation of a generic Tonie."""

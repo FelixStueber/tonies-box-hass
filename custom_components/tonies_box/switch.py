@@ -7,6 +7,7 @@ from .const import DOMAIN
 from .coordinator import TonieboxDataUpdateCoordinator
 from .entity import TonieboxEntity
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -16,11 +17,12 @@ async def async_setup_entry(
     coordinator: TonieboxDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     entities = []
-    
+
     for box_id in coordinator.data["boxes"]:
         entities.append(TonieboxEarSlapSwitch(coordinator, box_id))
 
     async_add_entities(entities)
+
 
 class TonieboxEarSlapSwitch(TonieboxEntity, SwitchEntity):
     """Switch for Toniebox Ear Slap."""

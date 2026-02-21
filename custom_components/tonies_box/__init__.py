@@ -7,7 +7,13 @@ from .api import TonieboxApiClient
 from .const import DOMAIN
 from .coordinator import TonieboxDataUpdateCoordinator
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SWITCH, Platform.SELECT]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.SWITCH,
+    Platform.SELECT,
+]
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Toniebox from a config entry."""
@@ -35,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 await coordinator.client.async_upload_file(tonie_id, file_path, title)
                 await coordinator.async_request_refresh()
                 return
-        
+
         raise ValueError(f"Tonie ID {tonie_id} not found")
 
     if not hass.services.has_service(DOMAIN, "upload_file"):
@@ -51,7 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 await coordinator.client.async_add_chapter(tonie_id, file_id, title)
                 await coordinator.async_request_refresh()
                 return
-        
+
         raise ValueError(f"Tonie ID {tonie_id} not found")
 
     if not hass.services.has_service(DOMAIN, "add_chapter"):
@@ -66,7 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 await coordinator.client.async_sort_chapters(tonie_id, chapters)
                 await coordinator.async_request_refresh()
                 return
-        
+
         raise ValueError(f"Tonie ID {tonie_id} not found")
 
     if not hass.services.has_service(DOMAIN, "sort_chapters"):
@@ -80,7 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 await coordinator.client.async_clear_chapters(tonie_id)
                 await coordinator.async_request_refresh()
                 return
-        
+
         raise ValueError(f"Tonie ID {tonie_id} not found")
 
     if not hass.services.has_service(DOMAIN, "clear_chapters"):
@@ -88,20 +94,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_set_volume(call: ServiceCall):
         box_id = call.data.get("box_id")
-        volume = int(call.data.get("volume"))
+        volume_raw = call.data.get("volume") # Get raw value
+
+        if volume_raw is None:
+            raise ValueError("Volume must be specified for set_volume service call")
+
+        try:
+            volume = int(volume_raw)
+        except ValueError as e:
+            raise ValueError(f"Invalid volume value: {volume_raw}") from e
 
         for coordinator in hass.data[DOMAIN].values():
             if box_id in coordinator.data.get("boxes", {}):
                 await coordinator.client.async_set_volume(box_id, volume)
                 await coordinator.async_request_refresh()
                 return
-        
+
         raise ValueError(f"Toniebox ID {box_id} not found")
 
     if not hass.services.has_service(DOMAIN, "set_volume"):
         hass.services.async_register(DOMAIN, "set_volume", handle_set_volume)
 
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""

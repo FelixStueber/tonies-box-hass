@@ -1,4 +1,5 @@
 """The module of the Toniecloud session."""
+
 import logging
 
 import requests
@@ -7,11 +8,14 @@ from requests.exceptions import RequestException, Timeout
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
+
 class TonieCloudSession(requests.Session):
     """A regular restss session to the TonieCloud REST API."""
 
     URI: str = "https://api.tonie.cloud/v2"
-    OPENID_CONNECT: str = "https://login.tonies.com/auth/realms/tonies/protocol/openid-connect/token"
+    OPENID_CONNECT: str = (
+        "https://login.tonies.com/auth/realms/tonies/protocol/openid-connect/token"
+    )
 
     def __init__(self):
         """Initialize the session."""
@@ -26,7 +30,7 @@ class TonieCloudSession(requests.Session):
             password (str): The password_
             timeout (int): The request timeout. Try to increase this value if you receive a timeout error
         """
-        self.token = self._acquire_token(username, password,timeout)
+        self.token = self._acquire_token(username, password, timeout)
 
     def _acquire_token(self, username: str, password: str, timeout: int) -> str | None:
         data = {

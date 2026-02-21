@@ -7,6 +7,7 @@ from .const import DOMAIN
 from .coordinator import TonieboxDataUpdateCoordinator
 from .entity import CreativeTonieEntity, TonieboxEntity
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -15,8 +16,8 @@ async def async_setup_entry(
     """Set up Toniebox binary sensors."""
     coordinator: TonieboxDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    entities = []
-    
+    entities: list[BinarySensorEntity] = []
+
     for box_id in coordinator.data["boxes"]:
         entities.append(TonieboxOfflineSensor(coordinator, box_id))
 
@@ -25,6 +26,7 @@ async def async_setup_entry(
         entities.append(CreativeToniePrivateSensor(coordinator, tonie_id))
 
     async_add_entities(entities)
+
 
 class TonieboxOfflineSensor(TonieboxEntity, BinarySensorEntity):
     """Binary sensor for Toniebox offline mode."""
@@ -41,8 +43,10 @@ class TonieboxOfflineSensor(TonieboxEntity, BinarySensorEntity):
     def is_on(self):
         return self.box_data.get("offlineMode", False)
 
+
 class CreativeTonieBinarySensorBase(CreativeTonieEntity, BinarySensorEntity):
     """Base class for Creative Tonie binary sensors."""
+
 
 class CreativeTonieLiveSensor(CreativeTonieBinarySensorBase):
     """Binary sensor for Creative Tonie Live status."""
@@ -58,6 +62,7 @@ class CreativeTonieLiveSensor(CreativeTonieBinarySensorBase):
     @property
     def is_on(self):
         return self.tonie_data.get("live", False)
+
 
 class CreativeToniePrivateSensor(CreativeTonieBinarySensorBase):
     """Binary sensor for Creative Tonie Private status."""

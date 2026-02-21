@@ -5,7 +5,6 @@ from unittest.mock import patch
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 
-from custom_components.tonies_box.const import DOMAIN
 
 from .const import MOCK_CONFIG
 

@@ -16,8 +16,11 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class TonieboxDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching Toniebox data."""
+
+    client: TonieboxApiClient # Add this line
 
     def __init__(
         self,

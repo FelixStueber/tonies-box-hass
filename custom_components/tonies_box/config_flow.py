@@ -6,6 +6,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import TonieboxApiClient, TonieboxApiClientAuthenticationError
 from .const import DOMAIN
 
+
 class TonieboxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Toniebox."""
 
