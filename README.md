@@ -1,22 +1,47 @@
 # Toniebox Integration for Home Assistant
 
-A custom integration for Home Assistant to manage your Toniebox Creative Tonies via the Tonie Cloud API.
+A custom integration for Home Assistant to manage your Toniebox devices and Creative Tonies via the Tonie Cloud API.
 
 ## Features
 
+- **Media Player** for each Toniebox:
+  - Playback state (playing / idle)
+  - Volume control
+  - Mute toggle (maps to the ear-slap gesture)
+
+- **Sensor Entities** for each Toniebox:
+  - Maximum speaker volume
+  - Maximum headphone volume
+  - Connected Wi-Fi SSID
+  - Battery level *(when exposed by firmware)*
+  - Wi-Fi signal strength (RSSI) *(when exposed by firmware)*
+  - Last played timestamp *(when exposed by firmware)*
+
 - **Sensor Entities** for each Creative Tonie:
   - Number of chapters present
-  - Total duration of content
-  - Remaining chapter capacity
-  - Remaining duration capacity
-  - Transcoding status
-  - Last update timestamp
+  - Total duration of content (seconds)
+  - Remaining duration capacity (seconds)
+  - Transcoding status (`ready` or `transcoding`)
 
-- **Services** to manage your Creative Tonies:
+- **Binary Sensor Entities** for each Toniebox:
+  - Offline mode status
+
+- **Binary Sensor Entities** for each Creative Tonie:
+  - Live status
+  - Private status
+
+- **Switch Entities** for each Toniebox:
+  - Ear Slap (tap-to-skip gesture) toggle
+
+- **Select Entities** for each Toniebox:
+  - LED level (`off`, `dimmed`, `on`)
+
+- **Services** to manage your Creative Tonies and Toniebox:
   - Upload audio files to Creative Tonies
   - Add chapters from already uploaded files
   - Clear all chapters from a Creative Tonie
   - Sort/reorder chapters
+  - Set maximum speaker volume
 
 - **Multi-language Support**: English and French translations included
 
@@ -28,7 +53,7 @@ A custom integration for Home Assistant to manage your Toniebox Creative Tonies 
    - Go to HACS → Integrations
    - Click the three dots in the top right corner
    - Select "Custom repositories"
-   - Add the URL of this repository
+   - Add `https://github.com/homeassistant-fr-ecosystem/tonies-box-hass`
    - Select "Integration" as the category
 
 2. Install the integration through HACS
@@ -54,21 +79,54 @@ A custom integration for Home Assistant to manage your Toniebox Creative Tonies 
 
 4. Enter your Toniebox cloud credentials (email and password)
 
-5. Your Creative Tonies will appear as devices with their associated sensors
+5. Your Toniebox devices and Creative Tonies will appear as devices with their associated entities
 
 ## Usage
 
-### Sensors
+### Media Player
 
-Each Creative Tonie will have the following sensors:
+Each Toniebox appears as a media player entity. It reflects live playback state from the Tonie Cloud and supports:
+
+- **Volume control** — adjusts the maximum speaker volume
+- **Mute** — disables the ear-slap (tap-to-skip) gesture
+
+> **Note:** Play/pause control is not supported — the Tonie Cloud API does not expose a playback endpoint.
+
+### Toniebox Sensors
+
+Each Toniebox has the following sensors:
+
+- **Max Volume**: Maximum speaker volume (%)
+- **Max Headphone Volume**: Maximum headphone volume (%)
+- **SSID**: The Wi-Fi network the box is connected to
+- **Battery**: Battery charge level (%) — only shown when your firmware reports it
+- **WiFi Signal**: Signal strength in dBm — only shown when your firmware reports it
+- **Last Played**: Timestamp of last playback — only shown when your firmware reports it
+
+### Toniebox Controls
+
+Each Toniebox has the following controls:
+
+- **Ear Slap** (switch): Enable or disable the tap-to-skip ear gesture
+- **LED** (select): Set the LED brightness — `off`, `dimmed`, or `on`
+
+### Toniebox Binary Sensors
+
+- **Offline Mode**: Whether the box is operating in offline mode
+
+### Creative Tonie Sensors
+
+Each Creative Tonie has the following sensors:
 
 - **Chapters**: Current number of chapters on the Tonie
-  - Attributes include the full chapter list with titles, durations, and IDs
 - **Duration**: Total duration of all content in seconds
-- **Remaining Chapters**: How many more chapters can be added
-- **Remaining Duration**: How much more time (in seconds) can be added
-- **Transcoding Status**: Shows if files are being processed (`ready` or `transcoding`)
-- **Last Update**: Timestamp of the last modification
+- **Remaining**: How much more time (in seconds) can be added
+- **Transcoding**: Shows if files are being processed (`ready` or `transcoding`)
+
+### Creative Tonie Binary Sensors
+
+- **Live**: Whether the Creative Tonie is set to live mode
+- **Private**: Whether the Creative Tonie is set to private mode
 
 ### Services
 
@@ -119,26 +177,33 @@ data:
       title: "Chapter 1"
       file: "file-1-id"
       seconds: 120.5
-      transcoding: false
     - id: "chapter-2-id"
       title: "Chapter 2"
       file: "file-2-id"
       seconds: 95.3
-      transcoding: false
 ```
 
-### Finding Tonie IDs
+#### Set Volume
 
-You can find the Tonie ID in several ways:
+Set the maximum speaker volume of a Toniebox (0–100):
 
-1. **From the sensor entity**:
-   - Go to Developer Tools → States
-   - Find your Tonie sensor (e.g., `sensor.my_tonie_chapters`)
-   - The device information will show the Tonie ID
+```yaml
+service: tonies_box.set_volume
+data:
+  box_id: "your-box-id-here"
+  volume: 75
+```
 
-2. **From sensor attributes**:
-   - Check the chapter list attributes in the Chapters sensor
-   - Each chapter includes the parent Tonie's household ID and ID
+### Finding Tonie and Box IDs
+
+You can find IDs in several ways:
+
+1. **From Developer Tools → States**:
+   - Find your entity (e.g., `sensor.my_tonie_chapters` or `sensor.my_toniebox_max_volume`)
+   - The device information will show the ID
+
+2. **From the Raw Data sensor**:
+   - A `sensor.<entry>_raw_data` entity exposes the full API response as attributes, including all IDs
 
 ## Example Automations
 
@@ -181,44 +246,86 @@ automation:
   - alias: "Warn when Tonie is almost full"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.my_tonie_remaining_chapters
-        below: 5
+        entity_id: sensor.my_tonie_remaining
+        below: 300
     action:
       - service: notify.mobile_app
         data:
-          message: "Your Tonie only has {{ states('sensor.my_tonie_remaining_chapters') }} chapters left!"
+          message: "Your Tonie only has {{ states('sensor.my_tonie_remaining') }} seconds of space left!"
+```
+
+### Dim LED at Bedtime
+
+```yaml
+automation:
+  - alias: "Dim Toniebox LED at bedtime"
+    trigger:
+      - platform: time
+        at: "20:00:00"
+    action:
+      - service: select.select_option
+        target:
+          entity_id: select.my_toniebox_led
+        data:
+          option: "dimmed"
+```
+
+### Adjust Volume Based on Time of Day
+
+```yaml
+automation:
+  - alias: "Lower Toniebox volume at night"
+    trigger:
+      - platform: time
+        at: "20:30:00"
+    action:
+      - service: media_player.volume_set
+        target:
+          entity_id: media_player.my_toniebox_media_player
+        data:
+          volume_level: 0.3
 ```
 
 ## Troubleshooting
 
 ### Authentication Issues
 
-If you receive authentication errors:
+If you receive an authentication error during setup:
 - Verify your email and password are correct
 - Try logging in at [meine.tonies.de](https://meine.tonies.de) to ensure your account is active
-- Check that you're using the correct region (this integration uses the default Tonie Cloud API)
+- Check that your network can reach `login.tonies.com`
+
+### Connection Errors During Setup
+
+If you see a "cannot connect" error:
+- Check your Home Assistant host has internet access
+- Verify no firewall is blocking outbound HTTPS traffic
 
 ### File Upload Fails
 
 - Ensure the file path is accessible by Home Assistant
-- Supported formats: MP3, M4A, OGG, WAV (check current API limits)
-- Verify the file size doesn't exceed the Creative Tonie's capacity
+- Supported formats depend on the Tonie API (MP3 is recommended)
+- Verify the file size doesn't exceed the Creative Tonie's remaining capacity (check the `Remaining` sensor)
 
 ### Sensors Not Updating
 
-- The integration polls the API every 5 minutes by default
+- The integration polls the API every 5 minutes
 - You can manually refresh by calling the `homeassistant.update_entity` service
-- Services automatically trigger a refresh after successful operations
+- Services automatically trigger a refresh after a successful operation
+
+### Battery / RSSI / Last Played Sensors Missing
+
+These sensors only appear when your Toniebox firmware reports the corresponding data. Not all firmware versions expose battery level, signal strength, or last-played timestamp. If these sensors are missing, your device likely doesn't report them yet.
 
 ## API Reference
 
-This integration uses the unofficial [tonie-api](https://github.com/Wilhelmsson177/tonie-api) Python library.
+This integration communicates directly with the Tonie Cloud REST API (`api.tonie.cloud`) and GraphQL endpoint (`api.prod.tcs.toys`).
 
 **Note**: This integration is not affiliated with or endorsed by Boxine GmbH (tonies.de).
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a Pull Request on [GitHub](https://github.com/homeassistant-fr-ecosystem/tonies-box-hass).
 
 ## License
 
@@ -226,9 +333,4 @@ This project is licensed under the MIT License.
 
 ## Credits
 
-- [tonie-api](https://github.com/Wilhelmsson177/tonie-api) by Wilhelmsson177
-- Inspired by the community's need for Home Assistant integration with Toniebox
-
-## Support
-
-For issues, questions, or feature requests, please open an issue on the [GitHub repository](https://github.com/your-username/tonies_hass).
+Inspired by the community's need for Home Assistant integration with Toniebox.

@@ -1,4 +1,7 @@
-from homeassistant.components.sensor import SensorEntity
+import logging
+from datetime import datetime
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -9,6 +12,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .coordinator import TonieboxDataUpdateCoordinator
 from .entity import CreativeTonieEntity, TonieboxEntity
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -29,6 +34,12 @@ async def async_setup_entry(
         entities.append(TonieboxVolumeSensor(coordinator, box_id))
         entities.append(TonieboxHeadphoneVolumeSensor(coordinator, box_id))
         entities.append(TonieboxSSIDSensor(coordinator, box_id))
+        if box_data.get("batteryLevel") is not None:
+            entities.append(TonieboxBatterySensor(coordinator, box_id))
+        if box_data.get("rssi") is not None:
+            entities.append(TonieboxRSSISensor(coordinator, box_id))
+        if box_data.get("lastPlayed") is not None:
+            entities.append(TonieboxLastPlayedSensor(coordinator, box_id))
 
     # Create entities for each Creative Tonie
     for tonie_id, tonie_data in coordinator.data["creative_tonies"].items():
@@ -284,3 +295,66 @@ class TonieSensor(CoordinatorEntity, SensorEntity):
     def entity_picture(self):
         """Return the image URL of the Tonie."""
         return self.tonie_data.get("imageUrl")
+
+
+class TonieboxBatterySensor(TonieboxBaseSensor, SensorEntity):
+    """Sensor for Toniebox battery level."""
+
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_native_unit_of_measurement = "%"
+
+    @property
+    def unique_id(self):
+        return f"{self.box_id}_battery"
+
+    @property
+    def name(self):
+        return "Battery"
+
+    @property
+    def native_value(self):
+        return self.box_data.get("batteryLevel")
+
+
+class TonieboxRSSISensor(TonieboxBaseSensor, SensorEntity):
+    """Sensor for Toniebox WiFi signal strength."""
+
+    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+    _attr_native_unit_of_measurement = "dBm"
+
+    @property
+    def unique_id(self):
+        return f"{self.box_id}_rssi"
+
+    @property
+    def name(self):
+        return "WiFi Signal"
+
+    @property
+    def native_value(self):
+        return self.box_data.get("rssi")
+
+
+class TonieboxLastPlayedSensor(TonieboxBaseSensor, SensorEntity):
+    """Sensor for last played timestamp."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    @property
+    def unique_id(self):
+        return f"{self.box_id}_last_played"
+
+    @property
+    def name(self):
+        return "Last Played"
+
+    @property
+    def native_value(self) -> datetime | None:
+        raw = self.box_data.get("lastPlayed")
+        if raw is None:
+            return None
+        try:
+            return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            _LOGGER.warning("Invalid lastPlayed timestamp from API: %s", raw)
+            return None

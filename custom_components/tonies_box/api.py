@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import socket
+import time
 import aiohttp
 import async_timeout
 
@@ -29,10 +30,13 @@ class TonieboxApiClient:
         self._password = password
         self._session = session
         self._token = None
+        self._token_acquired_at: float = 0.0
 
     async def async_get_access_token(self) -> str:
-        if self._token:
+        if self._token and (time.monotonic() - self._token_acquired_at) < 240:
             return self._token
+
+        self._token = None  # clear stale token before re-auth
 
         payload = {
             "grant_type": "password",
@@ -44,18 +48,19 @@ class TonieboxApiClient:
 
         try:
             async with async_timeout.timeout(10):
-                response = await self._session.post(
+                async with self._session.post(
                     "https://login.tonies.com/auth/realms/tonies/protocol/openid-connect/token",
                     data=payload,
-                )
-                response.raise_for_status()
-                data = await response.json()
-                self._token = data.get("access_token")
-                if self._token is None:
-                    raise TonieboxApiClientAuthenticationError(
-                        "Access token not found in response"
-                    )
-                return self._token
+                ) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+                    self._token = data.get("access_token")
+                    if self._token is None:
+                        raise TonieboxApiClientAuthenticationError(
+                            "Access token not found in response"
+                        )
+                    self._token_acquired_at = time.monotonic()
+                    return self._token
         except (asyncio.TimeoutError, aiohttp.ClientError) as exception:
             raise TonieboxApiClientAuthenticationError(
                 "Error fetching token"
@@ -63,16 +68,7 @@ class TonieboxApiClient:
 
     async def async_get_data(self):
         """Get all data from the API."""
-        try:
-            token = await self.async_get_access_token()
-        except TonieboxApiClientAuthenticationError:
-            # Token might be expired or invalid, try once more if we had a token
-            if self._token:
-                self._token = None
-                token = await self.async_get_access_token()
-            else:
-                raise
-
+        token = await self.async_get_access_token()
         headers = {"Authorization": f"Bearer {token}"}
 
         try:
@@ -83,9 +79,19 @@ class TonieboxApiClient:
                 ) as resp:
                     if resp.status == 401:
                         self._token = None
-                        raise TonieboxApiClientAuthenticationError("Token expired")
-                    resp.raise_for_status()
-                    households = await resp.json()
+                        self._token_acquired_at = 0.0
+                        token = await self.async_get_access_token()
+                        headers = {"Authorization": f"Bearer {token}"}
+                        async with self._session.get(
+                            f"{API_BASE_URL}/households", headers=headers
+                        ) as resp2:
+                            if resp2.status == 401:
+                                raise TonieboxApiClientAuthenticationError("Token refresh did not resolve 401")
+                            resp2.raise_for_status()
+                            households = await resp2.json()
+                    else:
+                        resp.raise_for_status()
+                        households = await resp.json()
 
                 data = {
                     "households": [],

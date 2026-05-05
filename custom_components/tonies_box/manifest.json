@@ -7,5 +7,5 @@
   "documentation": "https://github.com/homeassistant-fr-ecosystem/tonies-box-hass",
   "iot_class": "cloud_polling",
   "requirements": ["tonie-api==0.1.2"],
-  "version": "0.1.0-beta"
+  "version": "0.2.0"
 }

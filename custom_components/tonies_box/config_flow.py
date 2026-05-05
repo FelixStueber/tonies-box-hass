@@ -1,3 +1,6 @@
+import asyncio
+
+import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
@@ -27,7 +30,7 @@ class TonieboxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await client.async_get_access_token()
             except TonieboxApiClientAuthenticationError:
                 errors["base"] = "invalid_auth"
-            except Exception:
+            except (aiohttp.ClientError, asyncio.TimeoutError):
                 errors["base"] = "cannot_connect"
             else:
                 await self.async_set_unique_id(user_input[CONF_USERNAME])
