@@ -3,16 +3,18 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import TonieboxDataUpdateCoordinator # Add this import
+from .coordinator import TonieboxDataUpdateCoordinator  # Add this import
 
 
 class TonieboxEntity(CoordinatorEntity):
     """Base class for Toniebox entities."""
 
     _attr_has_entity_name = True
-    coordinator: TonieboxDataUpdateCoordinator # Add this line
+    coordinator: TonieboxDataUpdateCoordinator  # Add this line
 
-    def __init__(self, coordinator: TonieboxDataUpdateCoordinator, box_id): # Add type hint here too
+    def __init__(
+        self, coordinator: TonieboxDataUpdateCoordinator, box_id
+    ):  # Add type hint here too
         super().__init__(coordinator)
         self.box_id = box_id
 
@@ -39,9 +41,11 @@ class CreativeTonieEntity(CoordinatorEntity):
     """Base class for Creative Tonie entities."""
 
     _attr_has_entity_name = True
-    coordinator: TonieboxDataUpdateCoordinator # Add this line
+    coordinator: TonieboxDataUpdateCoordinator  # Add this line
 
-    def __init__(self, coordinator: TonieboxDataUpdateCoordinator, tonie_id): # Add type hint here too
+    def __init__(
+        self, coordinator: TonieboxDataUpdateCoordinator, tonie_id
+    ):  # Add type hint here too
         super().__init__(coordinator)
         self.tonie_id = tonie_id
 

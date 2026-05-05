@@ -2,7 +2,7 @@ from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from typing import cast # Add this import
+from typing import cast  # Add this import
 
 from .const import DOMAIN
 from .coordinator import TonieboxDataUpdateCoordinator

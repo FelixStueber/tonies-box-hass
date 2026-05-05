@@ -1,6 +1,7 @@
 """Tests for TonieboxApiClient."""
+
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import aiohttp
 import pytest
@@ -8,7 +9,6 @@ import pytest
 from custom_components.tonies_box.api import (
     TonieboxApiClient,
     TonieboxApiClientAuthenticationError,
-    TonieboxApiClientCommunicationError,
 )
 
 
@@ -73,13 +73,16 @@ async def test_token_refreshed_when_stale(client, mock_session):
 async def test_get_access_token_timeout_raises_auth_error(client, mock_session):
     """Timeout during auth raises TonieboxApiClientAuthenticationError."""
     import asyncio
+
     mock_session.post.side_effect = asyncio.TimeoutError()
 
     with pytest.raises(TonieboxApiClientAuthenticationError):
         await client.async_get_access_token()
 
 
-async def test_get_access_token_connection_error_raises_auth_error(client, mock_session):
+async def test_get_access_token_connection_error_raises_auth_error(
+    client, mock_session
+):
     """aiohttp error during auth raises TonieboxApiClientAuthenticationError."""
     mock_session.post.side_effect = aiohttp.ClientConnectionError()
 

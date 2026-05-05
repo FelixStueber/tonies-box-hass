@@ -1,4 +1,5 @@
 """Global fixtures for tonies_box integration."""
+
 import pytest
 
 

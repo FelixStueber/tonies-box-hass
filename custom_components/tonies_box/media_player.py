@@ -1,4 +1,5 @@
 """Media player entity for Toniebox."""
+
 from homeassistant.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -21,8 +22,7 @@ async def async_setup_entry(
     """Set up media player entities from a config entry."""
     coordinator: TonieboxDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities = [
-        TonieboxMediaPlayer(coordinator, box_id)
-        for box_id in coordinator.data["boxes"]
+        TonieboxMediaPlayer(coordinator, box_id) for box_id in coordinator.data["boxes"]
     ]
     async_add_entities(entities)
 
@@ -36,8 +36,7 @@ class TonieboxMediaPlayer(TonieboxEntity, MediaPlayerEntity):
     """
 
     _attr_supported_features = (
-        MediaPlayerEntityFeature.VOLUME_SET
-        | MediaPlayerEntityFeature.VOLUME_MUTE
+        MediaPlayerEntityFeature.VOLUME_SET | MediaPlayerEntityFeature.VOLUME_MUTE
     )
 
     @property

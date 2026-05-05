@@ -1,25 +1,27 @@
 """Tests for entity state calculations."""
+
 from unittest.mock import MagicMock
 
-import pytest
-
+from custom_components.tonies_box.binary_sensor import (
+    CreativeTonieLiveSensor,
+    CreativeToniePrivateSensor,
+    TonieboxOfflineSensor,
+)
 from custom_components.tonies_box.coordinator import TonieboxDataUpdateCoordinator
+from custom_components.tonies_box.select import TonieboxLEDSelect
 from custom_components.tonies_box.sensor import (
-    TonieboxVolumeSensor,
-    TonieboxHeadphoneVolumeSensor,
-    TonieboxSSIDSensor,
     CreativeTonieChaptersSensor,
     CreativeTonieDurationSensor,
     CreativeTonieRemainingSensor,
     CreativeTonieTranscodingSensor,
-)
-from custom_components.tonies_box.binary_sensor import (
-    TonieboxOfflineSensor,
-    CreativeTonieLiveSensor,
-    CreativeToniePrivateSensor,
+    TonieboxBatterySensor,
+    TonieboxHeadphoneVolumeSensor,
+    TonieboxLastPlayedSensor,
+    TonieboxRSSISensor,
+    TonieboxSSIDSensor,
+    TonieboxVolumeSensor,
 )
 from custom_components.tonies_box.switch import TonieboxEarSlapSwitch
-from custom_components.tonies_box.select import TonieboxLEDSelect
 
 
 MOCK_DATA = {
@@ -124,7 +126,9 @@ def test_transcoding_sensor_transcoding():
     coord = make_coordinator()
     coord.data = dict(MOCK_DATA)
     coord.data["creative_tonies"] = dict(MOCK_DATA["creative_tonies"])
-    coord.data["creative_tonies"]["tonie-1"] = dict(MOCK_DATA["creative_tonies"]["tonie-1"])
+    coord.data["creative_tonies"]["tonie-1"] = dict(
+        MOCK_DATA["creative_tonies"]["tonie-1"]
+    )
     coord.data["creative_tonies"]["tonie-1"]["transcoding"] = True
     sensor = CreativeTonieTranscodingSensor(coord, "tonie-1")
     assert sensor.native_value == "transcoding"
@@ -140,13 +144,6 @@ def test_private_sensor_off():
     coord = make_coordinator()
     sensor = CreativeToniePrivateSensor(coord, "tonie-1")
     assert sensor.is_on is False
-
-
-from custom_components.tonies_box.sensor import (
-    TonieboxBatterySensor,
-    TonieboxRSSISensor,
-    TonieboxLastPlayedSensor,
-)
 
 
 def test_battery_sensor_value():
@@ -183,6 +180,7 @@ def test_rssi_sensor_none_when_absent():
 
 def test_last_played_sensor_value():
     from datetime import datetime, timezone
+
     coord = make_coordinator()
     coord.data = dict(MOCK_DATA)
     coord.data["boxes"] = dict(MOCK_DATA["boxes"])

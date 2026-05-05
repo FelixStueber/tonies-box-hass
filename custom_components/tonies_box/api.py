@@ -86,7 +86,9 @@ class TonieboxApiClient:
                             f"{API_BASE_URL}/households", headers=headers
                         ) as resp2:
                             if resp2.status == 401:
-                                raise TonieboxApiClientAuthenticationError("Token refresh did not resolve 401")
+                                raise TonieboxApiClientAuthenticationError(
+                                    "Token refresh did not resolve 401"
+                                )
                             resp2.raise_for_status()
                             households = await resp2.json()
                     else:

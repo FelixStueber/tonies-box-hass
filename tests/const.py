@@ -1,4 +1,5 @@
 """Constants for Toniebox tests."""
+
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 

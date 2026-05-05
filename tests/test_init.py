@@ -16,7 +16,12 @@ async def test_load_unload_config_entry(hass: HomeAssistant) -> None:
 
     with patch(
         "custom_components.tonies_box.TonieboxApiClient.async_get_data",
-        return_value={"households": [], "boxes": {}, "creative_tonies": {}, "tonies": {}},
+        return_value={
+            "households": [],
+            "boxes": {},
+            "creative_tonies": {},
+            "tonies": {},
+        },
     ):
         assert await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()

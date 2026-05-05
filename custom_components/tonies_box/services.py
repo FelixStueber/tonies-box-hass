@@ -84,7 +84,9 @@ async def handle_set_volume(hass: HomeAssistant, call: ServiceCall) -> None:
     volume_raw = call.data.get("volume")
 
     if volume_raw is None:
-        raise ServiceValidationError("Volume must be specified for set_volume service call")
+        raise ServiceValidationError(
+            "Volume must be specified for set_volume service call"
+        )
 
     try:
         volume = int(volume_raw)

@@ -1,7 +1,7 @@
 """Tests for TonieboxDataUpdateCoordinator."""
+
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.tonies_box.api import (
@@ -15,7 +15,12 @@ MOCK_DATA = {
     "households": [{"id": "hh-1"}],
     "boxes": {"box-1": {"id": "box-1", "household_id": "hh-1", "name": "My Box"}},
     "creative_tonies": {
-        "tonie-1": {"id": "tonie-1", "name": "My Tonie", "household_id": "hh-1", "chapters": []}
+        "tonie-1": {
+            "id": "tonie-1",
+            "name": "My Tonie",
+            "household_id": "hh-1",
+            "chapters": [],
+        }
     },
     "tonies": {},
 }

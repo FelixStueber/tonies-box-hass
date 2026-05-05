@@ -1,5 +1,6 @@
 """Tests for service handlers."""
-from unittest.mock import AsyncMock, MagicMock, patch
+
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -42,11 +43,17 @@ async def test_upload_file_valid_tonie(hass: HomeAssistant):
     hass.data["tonies_box"] = {"entry-1": coordinator}
 
     call = MagicMock(spec=ServiceCall)
-    call.data = {"tonie_id": "tonie-1", "file_path": "/tmp/test.mp3", "title": "My Track"}
+    call.data = {
+        "tonie_id": "tonie-1",
+        "file_path": "/tmp/test.mp3",
+        "title": "My Track",
+    }
 
     await handle_upload_file(hass, call)
 
-    coordinator.client.async_upload_file.assert_called_once_with("tonie-1", "/tmp/test.mp3", "My Track")
+    coordinator.client.async_upload_file.assert_called_once_with(
+        "tonie-1", "/tmp/test.mp3", "My Track"
+    )
     coordinator.async_request_refresh.assert_called_once()
 
 
@@ -55,7 +62,11 @@ async def test_upload_file_invalid_tonie_raises(hass: HomeAssistant):
     hass.data["tonies_box"] = {"entry-1": coordinator}
 
     call = MagicMock(spec=ServiceCall)
-    call.data = {"tonie_id": "unknown-tonie", "file_path": "/tmp/test.mp3", "title": "My Track"}
+    call.data = {
+        "tonie_id": "unknown-tonie",
+        "file_path": "/tmp/test.mp3",
+        "title": "My Track",
+    }
 
     with pytest.raises(ServiceValidationError):
         await handle_upload_file(hass, call)
@@ -67,7 +78,11 @@ async def test_upload_file_makes_no_extra_api_calls(hass: HomeAssistant):
     hass.data["tonies_box"] = {"entry-1": coordinator}
 
     call = MagicMock(spec=ServiceCall)
-    call.data = {"tonie_id": "tonie-1", "file_path": "/tmp/test.mp3", "title": "My Track"}
+    call.data = {
+        "tonie_id": "tonie-1",
+        "file_path": "/tmp/test.mp3",
+        "title": "My Track",
+    }
 
     await handle_upload_file(hass, call)
 
@@ -132,7 +147,9 @@ async def test_add_chapter_valid(hass: HomeAssistant):
 
     await handle_add_chapter(hass, call)
 
-    coordinator.client.async_add_chapter.assert_called_once_with("tonie-1", "file-abc", "Chapter 1")
+    coordinator.client.async_add_chapter.assert_called_once_with(
+        "tonie-1", "file-abc", "Chapter 1"
+    )
     coordinator.async_request_refresh.assert_called_once()
 
 
@@ -145,7 +162,9 @@ async def test_sort_chapters_valid(hass: HomeAssistant):
 
     await handle_sort_chapters(hass, call)
 
-    coordinator.client.async_sort_chapters.assert_called_once_with("tonie-1", [{"id": "c1"}, {"id": "c2"}])
+    coordinator.client.async_sort_chapters.assert_called_once_with(
+        "tonie-1", [{"id": "c1"}, {"id": "c2"}]
+    )
     coordinator.async_request_refresh.assert_called_once()
 
 
@@ -154,7 +173,11 @@ async def test_add_chapter_invalid_tonie_raises(hass: HomeAssistant):
     hass.data["tonies_box"] = {"entry-1": coordinator}
 
     call = MagicMock(spec=ServiceCall)
-    call.data = {"tonie_id": "unknown-tonie", "file_id": "file-abc", "title": "Chapter 1"}
+    call.data = {
+        "tonie_id": "unknown-tonie",
+        "file_id": "file-abc",
+        "title": "Chapter 1",
+    }
 
     with pytest.raises(ServiceValidationError):
         await handle_add_chapter(hass, call)
