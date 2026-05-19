@@ -43,3 +43,4 @@ build/
 *.egg-info/
 
 .claude/settings.json
+.claude/worktrees
