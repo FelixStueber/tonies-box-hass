@@ -93,6 +93,13 @@ async def handle_set_volume(hass: HomeAssistant, call: ServiceCall) -> None:
     except (ValueError, TypeError) as e:
         raise ServiceValidationError(f"Invalid volume value: {volume_raw}") from e
 
+    # Validate volume is one of the allowed values
+    VALID_VOLUMES = [25, 50, 75, 100]
+    if volume not in VALID_VOLUMES:
+        raise ServiceValidationError(
+            f"Volume must be one of {VALID_VOLUMES}, got {volume}"
+        )
+
     for coordinator in hass.data[DOMAIN].values():
         if box_id in coordinator.data.get("boxes", {}):
             await coordinator.client.async_set_volume(box_id, volume)

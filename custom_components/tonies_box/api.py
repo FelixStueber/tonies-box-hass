@@ -291,9 +291,6 @@ class TonieboxApiClient:
 
     async def async_set_volume(self, box_id: str, volume: int):
         """Set the maximum volume of a Toniebox."""
-        token = await self.async_get_access_token()
-        headers = {"Authorization": f"Bearer {token}"}
-
         data = await self.async_get_data()
         if box_id not in data["boxes"]:
             raise TonieboxApiClientError(f"Toniebox {box_id} not found")
@@ -301,8 +298,11 @@ class TonieboxApiClient:
         box_data = data["boxes"][box_id]
         household_id = box_data["household_id"]
 
-        async with self._session.post(
-            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}/config",
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        async with self._session.patch(
+            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}",
             headers=headers,
             json={"maxVolume": volume},
         ) as resp:
@@ -310,9 +310,6 @@ class TonieboxApiClient:
 
     async def async_set_led(self, box_id: str, led_level: str):
         """Set the LED status of a Toniebox."""
-        token = await self.async_get_access_token()
-        headers = {"Authorization": f"Bearer {token}"}
-
         data = await self.async_get_data()
         if box_id not in data["boxes"]:
             raise TonieboxApiClientError(f"Toniebox {box_id} not found")
@@ -320,8 +317,11 @@ class TonieboxApiClient:
         box_data = data["boxes"][box_id]
         household_id = box_data["household_id"]
 
-        async with self._session.post(
-            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}/config",
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        async with self._session.patch(
+            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}",
             headers=headers,
             json={"ledLevel": led_level},
         ) as resp:
@@ -329,9 +329,6 @@ class TonieboxApiClient:
 
     async def async_set_ear_slap(self, box_id: str, enabled: bool):
         """Set the ear slap status of a Toniebox."""
-        token = await self.async_get_access_token()
-        headers = {"Authorization": f"Bearer {token}"}
-
         data = await self.async_get_data()
         if box_id not in data["boxes"]:
             raise TonieboxApiClientError(f"Toniebox {box_id} not found")
@@ -339,9 +336,12 @@ class TonieboxApiClient:
         box_data = data["boxes"][box_id]
         household_id = box_data["household_id"]
 
-        async with self._session.post(
-            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}/config",
+        token = await self.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        async with self._session.patch(
+            f"{API_BASE_URL}/households/{household_id}/tonieboxes/{box_id}",
             headers=headers,
-            json={"slapEnabled": enabled},
+            json={"accelerometerEnabled": enabled},
         ) as resp:
             resp.raise_for_status()

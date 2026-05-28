@@ -7,11 +7,11 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 
 from custom_components.tonies_box.services import (
-    handle_upload_file,
     handle_add_chapter,
-    handle_sort_chapters,
     handle_clear_chapters,
     handle_set_volume,
+    handle_sort_chapters,
+    handle_upload_file,
 )
 
 
@@ -95,11 +95,11 @@ async def test_set_volume_valid_box(hass: HomeAssistant):
     hass.data["tonies_box"] = {"entry-1": coordinator}
 
     call = MagicMock(spec=ServiceCall)
-    call.data = {"box_id": "box-1", "volume": 80}
+    call.data = {"box_id": "box-1", "volume": 75}
 
     await handle_set_volume(hass, call)
 
-    coordinator.client.async_set_volume.assert_called_once_with("box-1", 80)
+    coordinator.client.async_set_volume.assert_called_once_with("box-1", 75)
     coordinator.async_request_refresh.assert_called_once()
 
 
@@ -111,6 +111,17 @@ async def test_set_volume_missing_volume_raises(hass: HomeAssistant):
     call.data = {"box_id": "box-1", "volume": None}
 
     with pytest.raises(ServiceValidationError):
+        await handle_set_volume(hass, call)
+
+
+async def test_set_volume_invalid_volume_raises(hass: HomeAssistant):
+    coordinator = make_coordinator(MOCK_DATA)
+    hass.data["tonies_box"] = {"entry-1": coordinator}
+
+    call = MagicMock(spec=ServiceCall)
+    call.data = {"box_id": "box-1", "volume": 80}
+
+    with pytest.raises(ServiceValidationError, match="Volume must be one of"):
         await handle_set_volume(hass, call)
 
 

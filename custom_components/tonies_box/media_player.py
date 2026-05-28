@@ -71,7 +71,10 @@ class TonieboxMediaPlayer(TonieboxEntity, MediaPlayerEntity):
 
     async def async_set_volume_level(self, volume: float) -> None:
         """Set volume level (0.0-1.0)."""
-        volume_int = min(max(round(volume * 100), 0), 100)
+        # API only accepts 25, 50, 75, 100 - round to nearest valid value
+        VALID_VOLUMES = [25, 50, 75, 100]
+        target_volume = round(volume * 100)
+        volume_int = min(VALID_VOLUMES, key=lambda x: abs(target_volume - x))
         await self.coordinator.client.async_set_volume(self.box_id, volume_int)
         await self.coordinator.async_request_refresh()
 
